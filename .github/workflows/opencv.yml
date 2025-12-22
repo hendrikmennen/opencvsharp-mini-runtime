@@ -2,7 +2,7 @@ name: Build-OpenCV
 
 on:
   push:
-    branches: [ feature/docker ]
+    branches: [ main ]
     paths: [ .github/workflows/opencv.yml ]
   workflow_dispatch:
 
@@ -13,22 +13,23 @@ env:
     -D OPENCV_FORCE_3RDPARTY_BUILD=ON
     -D OPENCV_EXTRA_MODULES_PATH="${{ github.workspace }}/opencv_contrib/modules"
     -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencv/build/install"
-    -D BUILD_LIST=core,imgproc,imgcodecs
+    -D BUILD_LIST=core,imgproc,imgcodecs,videoio
     -D BUILD_SHARED_LIBS=OFF
     -D BUILD_EXAMPLES=OFF
     -D BUILD_DOCS=OFF
     -D BUILD_PERF_TESTS=OFF
     -D BUILD_TESTS=OFF
     -D BUILD_JAVA=OFF
-    -D WITH_GSTREAMER=OFF
+    -D WITH_GSTREAMER=ON
     -D WITH_ADE=OFF
-    -D WITH_FFMPEG=OFF
-    -D WITH_V4L=OFF
+    -D WITH_FFMPEG=ON
+    -D WITH_V4L=ON
     -D WITH_1394=OFF
     -D WITH_GTK=OFF
     -D WITH_OPENEXR=OFF
     -D WITH_PROTOBUF=OFF
     -D WITH_QUIRC=OFF
+    -D WITH_AVFOUNDATION=ON
     -D OPENCV_ENABLE_NONFREE=OFF
 
 jobs:
@@ -42,28 +43,10 @@ jobs:
     strategy:
       matrix:
         include:
-        - { os: ubuntu.22.04, arch: x64,   runs-on: ubuntu-22.04 }
-        - { os: ubuntu.22.04, arch: arm64, runs-on: ubuntu-22.04-arm }
-        - { os: win,          arch: x64,   runs-on: windows-2022 }
-        - { os: win,          arch: x86,   runs-on: windows-2022 }
-        - { os: win,          arch: arm64, runs-on: windows-11-arm }
+        - { os: ubuntu.24.04, arch: x64,   runs-on: ubuntu-24.04 }
+        - { os: ubuntu.24.04, arch: arm64, runs-on: ubuntu-24.04-arm }
         - { os: osx,          arch: x64,   runs-on: macos-13 }
         - { os: osx,          arch: arm64, runs-on: macos-14 }
-        - { os: centos.7,     arch: x64,   runs-on: ubuntu-22.04,     image: oraclelinux:7 }
-        - { os: centos.7,     arch: arm64, runs-on: ubuntu-22.04-arm, image: oraclelinux:7 }
-        - { os: rhel.8,       arch: x64,   runs-on: ubuntu-22.04,     image: oraclelinux:8 }
-        - { os: rhel.8,       arch: arm64, runs-on: ubuntu-22.04-arm, image: oraclelinux:8 }
-        - { os: alpine.3.22,  arch: x64,   runs-on: ubuntu-22.04,     image: alpine:3.22 }
-        - { os: alpine.3.22,  arch: arm64, runs-on: ubuntu-22.04-arm, image: alpine:3.22 }
-        - { os: android,      arch: arm64, runs-on: ubuntu-22.04 }
-        - { os: android,      arch: x64,   runs-on: ubuntu-22.04 }
-        # Uncomment the following lines to enable additional platforms:
-        # - { os: ubuntu.24.04, arch: x64,   runs-on: ubuntu-24.04 }
-        # - { os: ubuntu.24.04, arch: arm64, runs-on: ubuntu-24.04-arm }
-        # - { os: win11,        arch: x64,   runs-on: windows-2025 }
-        # - { os: osx.15,       arch: arm64, runs-on: macos-15 }
-        # - { os: rhel.9,       arch: x64,   runs-on: ubuntu-22.04,     image: oraclelinux:9 }
-        # - { os: rhel.9,       arch: arm64, runs-on: ubuntu-22.04-arm, image: oraclelinux:9 }
 
     steps:
     - name: Checkout OpenCV repo
@@ -82,148 +65,29 @@ jobs:
         path: opencv_contrib
         fetch-depth: 1
 
-    - name: Pull Docker Image
-      if: matrix.image != ''
+    - name: Install Dependencies
       run: |
-        docker pull ${{ matrix.image }}
-
-    - name: Start Docker Container
-      if: matrix.image != ''
-      run: |
-        docker run -d --name builder -v "$PWD":${{ github.workspace }} -w ${{ github.workspace }} ${{ matrix.image }} tail -f /dev/null
-
-    - name: Initialize Docker Container
-      if: matrix.image != ''
-      run: |
-        if [[ "${{ matrix.os }}" == "centos.7" ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            yum install -y oracle-epel-release-el7
-            yum-config-manager --enable ol7_developer_epel
-        EOS
-          )
-        elif [[ "${{ matrix.os }}" == "rhel.8" ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            dnf config-manager --set-enabled ol8_codeready_builder
-        EOS
-          )
-        elif [[ "${{ matrix.os }}" == "rhel.9" ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            dnf config-manager --set-enabled ol9_codeready_builder
-        EOS
-          )
+        if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config \\\n            libavcodec-dev libavformat-dev libswscale-dev \\\n            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \\\n            libv4l-dev v4l-utils
+        elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
+          brew install pkg-config ffmpeg
         fi
-        docker exec builder /bin/sh -c "$script"
-
-    - name: Install Dependencies in Docker Container
-      if: matrix.image != ''
-      run: |
-        if [[ "${{ matrix.os }}" == "centos.7" || "${{ matrix.os }}" =~ "rhel." ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            yum install -y gcc cmake3 gcc-c++ make nasm
-        EOS
-          )
-        elif [[ "${{ matrix.os }}" =~ ^alpine ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            apk add --no-cache build-base cmake nasm linux-headers
-        EOS
-          )
-        fi
-        docker exec builder /bin/sh -c "$script"
 
     - name: Configure OpenCV
       run: |
-        script=$(
-          cat <<'EOS'
-          set -eux
-          EXTRA_FLAGS=""
-          if [[ "${{ matrix.os }}" == "win" && "${{ matrix.arch }}" == "arm64" ]]; then
-            EXTRA_FLAGS+=" -DWITH_IPP=OFF -DCPU_BASELINE=NEON -A ARM64"
-          elif [[ "${{ matrix.os }}" == "win" && "${{ matrix.arch }}" == "x86" ]]; then
-            EXTRA_FLAGS+=" -A Win32"
-          elif [[ ${{ matrix.os }} == "centos.7" ]]; then
-            EXTRA_FLAGS+=" -DCMAKE_C_FLAGS='-std=gnu99'"
-            ln -s /usr/bin/cmake3 /usr/bin/cmake
-            if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-              echo "::group::Disable NEON in libwebp for CentOS 7 ARM64"
-              sed -i 's/\<WEBP_USE_NEON\>/WEBP_USE_NEON_DISABLED/' opencv/3rdparty/libwebp/src/dsp/yuv_neon.c
-              cat opencv/3rdparty/libwebp/src/dsp/yuv_neon.c
-              echo "::endgroup::"
-            fi
-          elif [[ "${{ matrix.os }}" == "android" ]]; then
-            echo "Configuring for Android / ${{ matrix.arch }}"
-          
-            EXTRA_FLAGS+=" -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake"
-            EXTRA_FLAGS+=" -DANDROID_PLATFORM=android-24"
-            EXTRA_FLAGS+=" -DANDROID_STL=c++_static"
-            EXTRA_FLAGS+=" -DBUILD_ANDROID_EXAMPLES=OFF DBUILD_ANDROID_PROJECTS=OFF"
-            EXTRA_FLAGS+=" -Wno-dev"
-          
-            if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-              EXTRA_FLAGS+=" -DANDROID_ABI=arm64-v8a"
-            elif [[ "${{ matrix.arch }}" == "x64" ]]; then
-              EXTRA_FLAGS+=" -DANDROID_ABI=x86_64"
-            fi
-          fi
-
-          cd opencv && mkdir build && cd build
-          cmake ${{ env.OPENCV_CMAKE_ARGS }} $EXTRA_FLAGS ..
-        EOS
-        )
-
-        if [[ "${{ matrix.image }}" == "" ]]; then
-          bash -c "$script"
-        else
-          docker exec builder /bin/sh -c "$script"
-        fi
+        cd opencv && mkdir build && cd build
+        cmake ${{ env.OPENCV_CMAKE_ARGS }} ..
 
     - name: Build OpenCV
       run: |
-        script=$(
-          cat <<'EOS'
-          set -eux
-          cd opencv/build
-          if [[ "${{ matrix.os }}" =~ ^win ]]; then
-            cmake --build . --config Release
-          else
-            make -j$(nproc)
-          fi
-        EOS
-        )
-
-        if [[ "${{ matrix.image }}" == "" ]]; then
-          bash -c "$script"
-        else
-          docker exec builder /bin/sh -c "$script"
-        fi
+        cd opencv/build
+        make -j$(nproc)
 
     - name: Install OpenCV
       run: |
-        script=$(
-          cat <<'EOS'
-          cd opencv/build
-          if [[ "${{ matrix.os }}" =~ ^win ]]; then
-             cmake --install . --config Release
-          else
-            make install
-          fi
-        EOS
-        )
-
-        if [[ "${{ matrix.image }}" == "" ]]; then
-          bash -c "$script"
-        else
-          docker exec builder /bin/sh -c "$script"
-        fi
+        cd opencv/build
+        make install
 
     - name: Show Build Artifacts
       run: |

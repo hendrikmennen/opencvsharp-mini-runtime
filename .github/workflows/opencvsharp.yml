@@ -3,7 +3,7 @@ name: Build-OpenCvSharp
 on:
   push:
     branches: 
-      - feature/docker
+      - main
     paths: 
       - .github/workflows/opencvsharp.yml
       - 'eng/opencvsharp.patch'
@@ -23,28 +23,10 @@ jobs:
     strategy:
       matrix:
         include:
-        - { os: ubuntu.22.04, arch: x64,   runs-on: ubuntu-22.04 }
-        - { os: ubuntu.22.04, arch: arm64, runs-on: ubuntu-22.04-arm }
-        - { os: win,          arch: x64,   runs-on: windows-2022 }
-        - { os: win,          arch: x86,   runs-on: windows-2022 }
-        - { os: win,          arch: arm64, runs-on: windows-11-arm }
+        - { os: ubuntu.24.04, arch: x64,   runs-on: ubuntu-24.04 }
+        - { os: ubuntu.24.04, arch: arm64, runs-on: ubuntu-24.04-arm }
         - { os: osx,          arch: x64,   runs-on: macos-13 }
         - { os: osx,          arch: arm64, runs-on: macos-14 }
-        - { os: centos.7,     arch: x64,   runs-on: ubuntu-22.04,     image: oraclelinux:7 }
-        - { os: centos.7,     arch: arm64, runs-on: ubuntu-22.04-arm, image: oraclelinux:7 }
-        - { os: rhel.8,       arch: x64,   runs-on: ubuntu-22.04,     image: oraclelinux:8 }
-        - { os: rhel.8,       arch: arm64, runs-on: ubuntu-22.04-arm, image: oraclelinux:8 }
-        - { os: alpine.3.22,  arch: x64,   runs-on: ubuntu-22.04,     image: alpine:3.22 }
-        - { os: alpine.3.22,  arch: arm64, runs-on: ubuntu-22.04-arm, image: alpine:3.22 }
-        - { os: android,      arch: arm64, runs-on: ubuntu-22.04 }
-        - { os: android,      arch: x64,   runs-on: ubuntu-22.04 }
-        # Uncomment the following lines to enable additional platforms:
-        # - { os: ubuntu.24.04, arch: x64,   runs-on: ubuntu-24.04 }
-        # - { os: ubuntu.24.04, arch: arm64, runs-on: ubuntu-24.04-arm }
-        # - { os: win11,        arch: x64,   runs-on: windows-2025 }
-        # - { os: osx.15,       arch: arm64, runs-on: macos-15 }
-        # - { os: rhel.9,       arch: x64,   runs-on: ubuntu-22.04,     image: oraclelinux:9 }
-        # - { os: rhel.9,       arch: arm64, runs-on: ubuntu-22.04-arm, image: oraclelinux:9 }
 
     steps:
     - name: Checkout
@@ -77,169 +59,42 @@ jobs:
         cd opencvsharp
         git apply --ignore-whitespace ../eng/opencvsharp.patch
 
-    - name: Pull Docker Image
-      if: matrix.image != ''
+    - name: Install Dependencies
       run: |
-        docker pull ${{ matrix.image }}
-
-    - name: Start Docker Container
-      if: matrix.image != ''
-      run: |
-        docker run -d --name builder -v "$PWD":${{ github.workspace }} -w ${{ github.workspace }} ${{ matrix.image }} tail -f /dev/null
-
-    - name: Initialize Docker Container
-      if: matrix.image != ''
-      run: |
-        if [[ "${{ matrix.os }}" == "centos.7" ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            yum install -y oracle-epel-release-el7
-            yum-config-manager --enable ol7_developer_epel
-        EOS
-          )
-        elif [[ "${{ matrix.os }}" == "rhel.8" ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            dnf config-manager --set-enabled ol8_codeready_builder
-        EOS
-          )
-        elif [[ "${{ matrix.os }}" == "rhel.9" ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            dnf config-manager --set-enabled ol9_codeready_builder
-        EOS
-          )
+        if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config
         fi
-        echo "Executing script in Docker container: $script"
-        docker exec builder /bin/sh -c "$script"
-
-    - name: Install Dependencies in Docker Container
-      if: matrix.image != ''
-      run: |
-        if [[ "${{ matrix.os }}" == "centos.7" || "${{ matrix.os }}" =~ "rhel." ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            yum install -y gcc cmake3 gcc-c++ make
-        EOS
-          )
-        elif [[ "${{ matrix.os }}" =~ ^alpine ]]; then
-          script=$(
-            cat <<'EOS'
-            set -eux
-            apk add --no-cache build-base cmake
-        EOS
-          )
-        fi
-        echo "Executing script in Docker container: $script"
-        docker exec builder /bin/sh -c "$script"
 
     - name: Configure OpenCvSharp
       run: |
-        script=$(
-          cat <<'EOS'
-          set -eux
-
-          set --
-          OpenCV_DIR="${{ github.workspace }}/opencv/lib/cmake/opencv4"
-
-          if [[ "${{ matrix.os }}" =~ ^win ]]; then
-            OpenCV_DIR="${{ github.workspace }}/opencv/${{ matrix.arch }}/vc17/staticlib"
-            if [[ "${{ matrix.arch }}" == "x86" ]]; then
-              set -- "$@" -A Win32
-            fi
-
-          elif [[ "${{ matrix.image }}" =~ ^oraclelinux ]]; then
-            OpenCV_DIR="${{ github.workspace }}/opencv/lib64/cmake/opencv4"
-            if [[ ${{ matrix.os }} == "centos.7" ]]; then
-              ln -s /usr/bin/cmake3 /usr/bin/cmake
-            fi
-
-          elif [[ "${{ matrix.os }}" =~ ^alpine ]]; then
-            set -- "$@" "-DCMAKE_SHARED_LINKER_FLAGS=-static-libstdc++ -static-libgcc"
-
-          elif [[ ${{ matrix.os }} == "android" ]]; then
-            OpenCV_DIR="${{ github.workspace }}/opencv/sdk/native/jni"
-            set -- "$@" \
-                "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake" \
-                "-DANDROID_PLATFORM=android-24" \
-                "-DANDROID_STL=c++_static"
-          
-            if [[ "${{ matrix.arch }}" == "arm64" ]]; then
-              set -- "$@" "-DANDROID_ABI=arm64-v8a"
-            elif [[ "${{ matrix.arch }}" == "x64" ]]; then
-              set -- "$@" "-DANDROID_ABI=x86_64"
-            fi
-          fi
-
-          cd opencvsharp && mkdir build && cd build
-          cmake \
-            -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencvsharp/build" \
-            -D OpenCV_DIR="$OpenCV_DIR" \
-            "$@" \
-            ../src
-        EOS
-        )
-
-        if [[ "${{ matrix.image }}" == "" ]]; then
-          bash -c "$script"
-        else
-          docker exec builder /bin/sh -c "$script"
-        fi
+        set -eux
+        OpenCV_DIR="${{ github.workspace }}/opencv/lib/cmake/opencv4"
+        
+        cd opencvsharp && mkdir build && cd build
+        cmake \\\n          -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencvsharp/build" \\\n          -D OpenCV_DIR="$OpenCV_DIR" \\\n          ../src
 
     - name: Build OpenCvSharp
       run: |
-        script=$(
-          cat <<'EOS'
-          set -eux
-          cd opencvsharp/build
-          if [[ "${{ matrix.os }}" =~ ^win ]]; then
-            cmake --build . --parallel --config Release
-          else
-            make -j$(nproc)
-          fi
-        EOS
-        )
-
-        if [[ "${{ matrix.image }}" == "" ]]; then
-          bash -c "$script"
-        else
-          docker exec builder /bin/sh -c "$script"
-        fi
+        set -eux
+        cd opencvsharp/build
+        make -j$(nproc)
 
     - name: Strip OpenCvSharpExtern
       run: |
-        script=$(
-          cat <<'EOS'
-          set -eux
-          cd opencvsharp/build
-          BIN="OpenCvSharpExtern/libOpenCvSharpExtern.so"
-  
-          if [[ "${{ matrix.os }}" =~ ^win ]]; then
-            BIN="OpenCvSharpExtern/Release/OpenCvSharpExtern.dll"
-            llvm-objcopy --strip-all "$BIN"
-          elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
-            BIN="OpenCvSharpExtern/libOpenCvSharpExtern.dylib"
-            strip -x "$BIN"
-          elif [[ "${{ matrix.os }}" == "android" ]]; then
-            $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip --strip-unneeded "$BIN"
-          else        # Linux
-            strip --strip-unneeded "$BIN"
-          fi
+        set -eux
+        cd opencvsharp/build
+        BIN="OpenCvSharpExtern/libOpenCvSharpExtern.so"
 
-          echo "Size after strip:"
-          du -h "$BIN"
-        EOS
-        )
-
-        if [[ "${{ matrix.image }}" == "" ]]; then
-          bash -c "$script"
-        else
-          docker exec builder /bin/sh -c "$script"
+        if [[ "${{ matrix.os }}" =~ ^osx ]]; then
+          BIN="OpenCvSharpExtern/libOpenCvSharpExtern.dylib"
+          strip -x "$BIN"
+        else  # Linux
+          strip --strip-unneeded "$BIN"
         fi
+
+        echo "Size after strip:"
+        du -h "$BIN"
 
     - name: Show OpenCvSharp Artifacts
       run: |
@@ -248,29 +103,16 @@ jobs:
         ls -lR
         echo "::endgroup::"
 
-        case "${{ matrix.os }}" in
-          android)
-            $ANDROID_NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf -d OpenCvSharpExtern/libOpenCvSharpExtern.so | grep NEEDED
-            ;;
-          win)
-            echo "Can't show dependencies for Windows DLLs"
-            ;;
-          osx*)
-            otool -L OpenCvSharpExtern/libOpenCvSharpExtern.dylib
-            ;;
-          *) # Linux
-            ldd OpenCvSharpExtern/libOpenCvSharpExtern.so
-            ;;
-        esac
+        if [[ "${{ matrix.os }}" =~ ^osx ]]; then
+          otool -L OpenCvSharpExtern/libOpenCvSharpExtern.dylib
+        else  # Linux
+          ldd OpenCvSharpExtern/libOpenCvSharpExtern.so
+        fi
 
     - name: Make artifacts
       run: |
         mkdir artifacts && cd artifacts && mkdir lib test
-        if [[ "${{ matrix.os }}" =~ ^win ]]; then
-          cp -r ../opencvsharp/build/OpenCvSharpExtern/Release/OpenCvSharpExtern.* ./lib
-        else
-          cp -r ../opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.* ./lib
-        fi
+        cp -r ../opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.* ./lib
         ls -lR
 
     - name: Upload Artifacts
