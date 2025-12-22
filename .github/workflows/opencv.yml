@@ -29,9 +29,6 @@ env:
     -D WITH_TBB=OFF
     -D WITH_EIGEN=OFF
     -D WITH_LAPACK=OFF
-    -D WITH_JPEG=OFF
-    -D WITH_PNG=OFF
-    -D WITH_TIFF=OFF
     -D WITH_WEBP=OFF
     -D WITH_OPENJPEG=OFF
     -D WITH_JASPER=OFF
@@ -42,8 +39,6 @@ env:
     -D WITH_PROTOBUF=OFF
     -D WITH_QUIRC=OFF
     -D BUILD_ZLIB=OFF
-    -D BUILD_JPEG=OFF
-    -D BUILD_PNG=OFF
     -D CV_TRACE=OFF
     -D OPENCV_ENABLE_NONFREE=OFF
 
@@ -88,17 +83,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config \
             libavcodec-dev libavformat-dev libswscale-dev \
-            libv4l-dev v4l-utils \
-            libudev-dev libusb-1.0-0-dev
+            libv4l-dev v4l-utils libv4l2rds0 \
+            libudev-dev libusb-1.0-0-dev \
+            libjpeg-dev libpng-dev \
+            uvcdynctrl
         fi
 
     - name: Configure OpenCV
       run: |
         EXTRA_ARGS=""
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
-          # Linux: Enable V4L2 only for camera capture
-          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_LIBV4L=ON -D WITH_AVFOUNDATION=OFF"
+          # Linux: V4L2 + FFmpeg, shared libs required for videoio plugins
+          EXTRA_ARGS="-D WITH_FFMPEG=ON"
+          EXTRA_ARGS="$EXTRA_ARGS -D WITH_GSTREAMER=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D WITH_V4L=ON"
+          EXTRA_ARGS="$EXTRA_ARGS -D WITH_LIBV4L=ON"
+          EXTRA_ARGS="$EXTRA_ARGS -D WITH_AVFOUNDATION=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D VIDEOIO_ENABLE_PLUGINS=ON"
+          EXTRA_ARGS="$EXTRA_ARGS -D BUILD_SHARED_LIBS=ON"
+          EXTRA_ARGS="$EXTRA_ARGS -D WITH_JPEG=ON -D WITH_PNG=ON"
+          EXTRA_ARGS="$EXTRA_ARGS -D BUILD_JPEG=ON -D BUILD_PNG=ON"
 
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           # macOS: AVFoundation-only, no videoio plugins (hardened runtime compatible)
@@ -108,7 +112,7 @@ jobs:
           EXTRA_ARGS="$EXTRA_ARGS -D WITH_V4L=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D VIDEOIO_ENABLE_PLUGINS=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D CMAKE_OSX_DEPLOYMENT_TARGET=10.15"
-          
+
         elif [[ "${{ matrix.os }}" =~ ^win ]]; then
           # Windows: Disable FFmpeg, GStreamer, V4L, use MSMF and DirectShow
           EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=OFF"
