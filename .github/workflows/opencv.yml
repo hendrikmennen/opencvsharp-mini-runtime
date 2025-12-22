@@ -93,14 +93,13 @@ jobs:
       run: |
         EXTRA_ARGS=""
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
-          # Linux: V4L2 + FFmpeg, shared libs required for videoio plugins
+          # Linux: Static build with V4L2 compiled in, no dynamic plugins
           EXTRA_ARGS="-D WITH_FFMPEG=ON"
           EXTRA_ARGS="$EXTRA_ARGS -D WITH_GSTREAMER=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D WITH_V4L=ON"
           EXTRA_ARGS="$EXTRA_ARGS -D WITH_LIBV4L=ON"
           EXTRA_ARGS="$EXTRA_ARGS -D WITH_AVFOUNDATION=OFF"
-          EXTRA_ARGS="$EXTRA_ARGS -D VIDEOIO_ENABLE_PLUGINS=ON"
-          EXTRA_ARGS="$EXTRA_ARGS -D BUILD_SHARED_LIBS=ON"
+          EXTRA_ARGS="$EXTRA_ARGS -D VIDEOIO_ENABLE_PLUGINS=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D WITH_JPEG=ON -D WITH_PNG=ON"
           EXTRA_ARGS="$EXTRA_ARGS -D BUILD_JPEG=ON -D BUILD_PNG=ON"
 
