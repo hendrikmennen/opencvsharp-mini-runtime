@@ -192,7 +192,7 @@ jobs:
               <OutputType>Exe</OutputType>
               <TargetFramework>net8.0</TargetFramework>
               <ImplicitUsings>enable</ImplicitUsings>
-              <PlatformTarget>${{ matrix.arch }}</PlatformTarget>
+              <RuntimeIdentifier>osx-${{ matrix.arch }}</RuntimeIdentifier>
             </PropertyGroup>
           </Project>
           EOF
