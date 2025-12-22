@@ -100,6 +100,14 @@ jobs:
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           # macOS: Use AVFoundation only (FFmpeg 8.x has API incompatibilities)
           EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=ON"
+        elif [[ "${{ matrix.os }}" =~ ^win ]]; then
+          # Windows: Disable FFmpeg, GStreamer, V4L, use MSMF and DirectShow
+          EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=OFF -D WITH_MSMF=ON -D WITH_DSHOW=ON"
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            EXTRA_ARGS="$EXTRA_ARGS -A ARM64"
+          else
+            EXTRA_ARGS="$EXTRA_ARGS -A x64"
+          fi
         fi
         
         cd opencv && mkdir build && cd build
@@ -108,12 +116,20 @@ jobs:
     - name: Build OpenCV
       run: |
         cd opencv/build
-        make -j$(nproc)
+        if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          cmake --build . --config Release --parallel
+        else
+          make -j$(nproc)
+        fi
 
     - name: Install OpenCV
       run: |
         cd opencv/build
-        make install
+        if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          cmake --install . --config Release
+        else
+          make install
+        fi
 
     - name: Show Build Artifacts
       run: |

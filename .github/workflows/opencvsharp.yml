@@ -76,27 +76,48 @@ jobs:
         OpenCV_DIR="${{ github.workspace }}/opencv/lib/cmake/opencv4"
         
         cd opencvsharp && mkdir build && cd build
-        cmake \
-          -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencvsharp/build" \
-          -D OpenCV_DIR="$OpenCV_DIR" \
-          ../src
+        
+        if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            cmake -A ARM64 \
+              -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencvsharp/build" \
+              -D OpenCV_DIR="$OpenCV_DIR" \
+              ../src
+          else
+            cmake -A x64 \
+              -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencvsharp/build" \
+              -D OpenCV_DIR="$OpenCV_DIR" \
+              ../src
+          fi
+        else
+          cmake \
+            -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencvsharp/build" \
+            -D OpenCV_DIR="$OpenCV_DIR" \
+            ../src
+        fi
 
     - name: Build OpenCvSharp
       run: |
         set -eux
         cd opencvsharp/build
-        make -j$(nproc)
+        if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          cmake --build . --config Release --parallel
+        else
+          make -j$(nproc)
+        fi
 
     - name: Strip OpenCvSharpExtern
       run: |
         set -eux
         cd opencvsharp/build
-        BIN="OpenCvSharpExtern/libOpenCvSharpExtern.so"
-
-        if [[ "${{ matrix.os }}" =~ ^osx ]]; then
+        
+        if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          BIN="OpenCvSharpExtern/Release/OpenCvSharpExtern.dll"
+        elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           BIN="OpenCvSharpExtern/libOpenCvSharpExtern.dylib"
           strip -x "$BIN"
         else  # Linux
+          BIN="OpenCvSharpExtern/libOpenCvSharpExtern.so"
           strip --strip-unneeded "$BIN"
         fi
 
@@ -110,7 +131,9 @@ jobs:
         ls -lR
         echo "::endgroup::"
 
-        if [[ "${{ matrix.os }}" =~ ^osx ]]; then
+        if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          echo "Windows DLL built"
+        elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           otool -L OpenCvSharpExtern/libOpenCvSharpExtern.dylib
         else  # Linux
           ldd OpenCvSharpExtern/libOpenCvSharpExtern.so
@@ -119,7 +142,11 @@ jobs:
     - name: Make artifacts
       run: |
         mkdir artifacts && cd artifacts && mkdir lib test
-        cp -r ../opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.* ./lib
+        if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          cp -r ../opencvsharp/build/OpenCvSharpExtern/Release/OpenCvSharpExtern.dll ./lib/
+        else
+          cp -r ../opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.* ./lib
+        fi
         ls -lR
 
     - name: Upload Artifacts
