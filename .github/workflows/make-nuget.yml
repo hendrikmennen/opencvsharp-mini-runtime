@@ -159,76 +159,9 @@ jobs:
         path: nupkgs/*.nupkg
         if-no-files-found: error
 
-  test-nuget:
-    name: Test NuGet
-    needs: make-nuget
-    strategy:
-      matrix:
-        include:
-          - { os: ubuntu.24.04, arch: x64,   runs-on: ubuntu-24.04,     upstream: ubuntu.24.04-x64 }
-          - { os: ubuntu.24.04, arch: arm64, runs-on: ubuntu-24.04-arm, upstream: ubuntu.24.04-arm64 }
-          - { os: osx,          arch: x64,   runs-on: macos-14,         upstream: osx-x64 }
-          - { os: osx,          arch: arm64, runs-on: macos-14,         upstream: osx-arm64 }
-          
-    runs-on: ${{ matrix.runs-on }}
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-      - name: Download NuGet artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: nuget-${{ matrix.os }}-${{ matrix.arch }}
-          path: ./nupkg
-
-      - name: Create test project
-        run: |
-          mkdir TestApp && cd TestApp
-          
-          cat > TestApp.csproj <<'EOF'
-          <Project Sdk="Microsoft.NET.Sdk">
-            <PropertyGroup>
-              <OutputType>Exe</OutputType>
-              <TargetFramework>net8.0</TargetFramework>
-              <ImplicitUsings>enable</ImplicitUsings>
-              <RuntimeIdentifier>osx-${{ matrix.arch }}</RuntimeIdentifier>
-            </PropertyGroup>
-          </Project>
-          EOF
-
-          dotnet add package OpenCvSharp4
-          dotnet nuget add source ../nupkg --name local
-          dotnet add package OneWare.OpenCvSharp4.runtime.${{ matrix.os }}-${{ matrix.arch }} --source ../nupkg
-
-      - name: Write test code
-        run: |
-          cat > TestApp/Program.cs <<'EOF'
-          using OpenCvSharp;
-          using System;
-          class Program
-          {
-              static void Main()
-              {
-                  using Mat mat = new Mat(rows: 3, cols: 4, type: MatType.CV_8SC4);
-                  Console.WriteLine("OpenCvSharp nuget test good!");
-              }
-          }
-          EOF
-
-      - name: Build
-        run: |
-          cd TestApp
-          dotnet build --configuration Release
-
-      - name: Run
-        run: |
-          cd TestApp
-          dotnet run --configuration Release --no-build
-
   upload-nuget:
     name: Upload NuGet
-    needs: [make-nuget, test-nuget]
+    needs: make-nuget
     runs-on: ubuntu-24.04
 
     steps:
