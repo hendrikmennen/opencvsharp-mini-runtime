@@ -8,7 +8,7 @@ on:
 
 env:
   OPENCV_VERSION: 4.11.0
-  OPENCV_CMAKE_ARGS: >-
+  OPENCV_CMAKE_ARGS_BASE: >-
     -D CMAKE_BUILD_TYPE=Release
     -D OPENCV_FORCE_3RDPARTY_BUILD=ON
     -D OPENCV_EXTRA_MODULES_PATH="${{ github.workspace }}/opencv_contrib/modules"
@@ -20,16 +20,12 @@ env:
     -D BUILD_PERF_TESTS=OFF
     -D BUILD_TESTS=OFF
     -D BUILD_JAVA=OFF
-    -D WITH_GSTREAMER=ON
     -D WITH_ADE=OFF
-    -D WITH_FFMPEG=ON
-    -D WITH_V4L=ON
     -D WITH_1394=OFF
     -D WITH_GTK=OFF
     -D WITH_OPENEXR=OFF
     -D WITH_PROTOBUF=OFF
     -D WITH_QUIRC=OFF
-    -D WITH_AVFOUNDATION=ON
     -D OPENCV_ENABLE_NONFREE=OFF
 
 jobs:
@@ -73,14 +69,21 @@ jobs:
             libavcodec-dev libavformat-dev libswscale-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             libv4l-dev v4l-utils
-        elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
-          brew install pkg-config ffmpeg
         fi
 
     - name: Configure OpenCV
       run: |
+        EXTRA_ARGS=""
+        if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
+          # Linux: Enable FFmpeg, GStreamer, and V4L
+          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=ON -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
+        elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
+          # macOS: Use AVFoundation only (FFmpeg 8.x has API incompatibilities)
+          EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=ON"
+        fi
+        
         cd opencv && mkdir build && cd build
-        cmake ${{ env.OPENCV_CMAKE_ARGS }} ..
+        cmake ${{ env.OPENCV_CMAKE_ARGS_BASE }} $EXTRA_ARGS ..
 
     - name: Build OpenCV
       run: |

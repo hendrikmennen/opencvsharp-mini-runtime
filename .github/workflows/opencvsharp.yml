@@ -25,7 +25,7 @@ jobs:
         include:
         - { os: ubuntu.24.04, arch: x64,   runs-on: ubuntu-24.04 }
         - { os: ubuntu.24.04, arch: arm64, runs-on: ubuntu-24.04-arm }
-        - { os: osx,          arch: x64,   runs-on: macos-13 }
+        - { os: osx,          arch: x64,   runs-on: macos-14 }
         - { os: osx,          arch: arm64, runs-on: macos-14 }
 
     steps:
