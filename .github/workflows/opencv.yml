@@ -99,9 +99,16 @@ jobs:
           # Linux: Enable V4L2 only for camera capture
           EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_LIBV4L=ON -D WITH_AVFOUNDATION=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D VIDEOIO_ENABLE_PLUGINS=ON"
+
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
-          # macOS: Use AVFoundation only (FFmpeg 8.x has API incompatibilities)
-          EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=ON"
+          # macOS: AVFoundation-only, no videoio plugins (hardened runtime compatible)
+          EXTRA_ARGS="-D WITH_AVFOUNDATION=ON"
+          EXTRA_ARGS="$EXTRA_ARGS -D WITH_FFMPEG=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D WITH_GSTREAMER=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D WITH_V4L=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D VIDEOIO_ENABLE_PLUGINS=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D CMAKE_OSX_DEPLOYMENT_TARGET=10.15"
+          
         elif [[ "${{ matrix.os }}" =~ ^win ]]; then
           # Windows: Disable FFmpeg, GStreamer, V4L, use MSMF and DirectShow
           EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=OFF"
