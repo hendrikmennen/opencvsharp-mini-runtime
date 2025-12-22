@@ -101,7 +101,7 @@ jobs:
         set -eux
         cd opencvsharp/build
         if [[ "${{ matrix.os }}" =~ ^win ]]; then
-          cmake --build . --config Release --parallel
+          cmake --build . --parallel --config Release
         else
           make -j$(nproc)
         fi
@@ -113,6 +113,7 @@ jobs:
         
         if [[ "${{ matrix.os }}" =~ ^win ]]; then
           BIN="OpenCvSharpExtern/Release/OpenCvSharpExtern.dll"
+          llvm-objcopy --strip-all "$BIN"
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           BIN="OpenCvSharpExtern/libOpenCvSharpExtern.dylib"
           strip -x "$BIN"
@@ -131,19 +132,23 @@ jobs:
         ls -lR
         echo "::endgroup::"
 
-        if [[ "${{ matrix.os }}" =~ ^win ]]; then
-          echo "Windows DLL built"
-        elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
-          otool -L OpenCvSharpExtern/libOpenCvSharpExtern.dylib
-        else  # Linux
-          ldd OpenCvSharpExtern/libOpenCvSharpExtern.so
-        fi
+        case "${{ matrix.os }}" in
+          win)
+            echo "Can't show dependencies for Windows DLLs"
+            ;;
+          osx*)
+            otool -L OpenCvSharpExtern/libOpenCvSharpExtern.dylib
+            ;;
+          *) # Linux
+            ldd OpenCvSharpExtern/libOpenCvSharpExtern.so
+            ;;
+        esac
 
     - name: Make artifacts
       run: |
         mkdir artifacts && cd artifacts && mkdir lib test
         if [[ "${{ matrix.os }}" =~ ^win ]]; then
-          cp -r ../opencvsharp/build/OpenCvSharpExtern/Release/OpenCvSharpExtern.dll ./lib/
+          cp -r ../opencvsharp/build/OpenCvSharpExtern/Release/OpenCvSharpExtern.* ./lib
         else
           cp -r ../opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.* ./lib
         fi
