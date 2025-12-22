@@ -82,26 +82,15 @@ jobs:
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config \
-            libavcodec-dev libavformat-dev libswscale-dev \
-            libv4l-dev v4l-utils libv4l2rds0 \
-            libudev-dev libusb-1.0-0-dev \
-            libjpeg-dev libpng-dev \
-            uvcdynctrl
+            libv4l-dev v4l-utils
         fi
 
     - name: Configure OpenCV
       run: |
         EXTRA_ARGS=""
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
-          # Linux: Static build with V4L2 compiled in, no dynamic plugins
-          EXTRA_ARGS="-D WITH_FFMPEG=ON"
-          EXTRA_ARGS="$EXTRA_ARGS -D WITH_GSTREAMER=OFF"
-          EXTRA_ARGS="$EXTRA_ARGS -D WITH_V4L=ON"
-          EXTRA_ARGS="$EXTRA_ARGS -D WITH_LIBV4L=ON"
-          EXTRA_ARGS="$EXTRA_ARGS -D WITH_AVFOUNDATION=OFF"
-          EXTRA_ARGS="$EXTRA_ARGS -D VIDEOIO_ENABLE_PLUGINS=OFF"
-          EXTRA_ARGS="$EXTRA_ARGS -D WITH_JPEG=ON -D WITH_PNG=ON"
-          EXTRA_ARGS="$EXTRA_ARGS -D BUILD_JPEG=ON -D BUILD_PNG=ON"
+          # Linux: V4L only for camera support
+          EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
 
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           # macOS: AVFoundation-only, no videoio plugins (hardened runtime compatible)
