@@ -78,6 +78,8 @@ jobs:
         cd opencvsharp && mkdir build && cd build
         
         if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          # Windows: Use the cmake install structure from opencv build
+          OpenCV_DIR="${{ github.workspace }}/opencv/lib/cmake/opencv4"
           if [[ "${{ matrix.arch }}" == "arm64" ]]; then
             cmake -A ARM64 \
               -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencvsharp/build" \
