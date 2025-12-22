@@ -114,8 +114,9 @@ jobs:
           EXTRA_ARGS="$EXTRA_ARGS -D CMAKE_OSX_DEPLOYMENT_TARGET=10.15"
 
         elif [[ "${{ matrix.os }}" =~ ^win ]]; then
-          # Windows: Disable FFmpeg, GStreamer, V4L, use MSMF and DirectShow
+          # Windows: Use MSMF and DirectShow for camera access
           EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D WITH_DSHOW=ON"
           if [[ "${{ matrix.arch }}" == "arm64" ]]; then
             EXTRA_ARGS="$EXTRA_ARGS -D WITH_IPP=OFF -D CPU_BASELINE=NEON -A ARM64"
           else
