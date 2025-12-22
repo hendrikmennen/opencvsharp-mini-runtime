@@ -1,9 +1,9 @@
 name: Build-OpenCV
 
 on:
-  push:
-    branches: [ main ]
-    paths: [ .github/workflows/opencv.yml ]
+  #push:
+  #  branches: [ main ]
+  #  paths: [ .github/workflows/opencv.yml ]
   workflow_dispatch:
 
 env:
@@ -13,19 +13,38 @@ env:
     -D OPENCV_FORCE_3RDPARTY_BUILD=ON
     -D OPENCV_EXTRA_MODULES_PATH="${{ github.workspace }}/opencv_contrib/modules"
     -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencv/build/install"
-    -D BUILD_LIST=core,imgproc,imgcodecs,videoio
+    -D BUILD_LIST=core,imgproc,videoio
     -D BUILD_SHARED_LIBS=OFF
     -D BUILD_EXAMPLES=OFF
     -D BUILD_DOCS=OFF
     -D BUILD_PERF_TESTS=OFF
     -D BUILD_TESTS=OFF
     -D BUILD_JAVA=OFF
+    -D BUILD_opencv_apps=OFF
+    -D BUILD_opencv_python2=OFF
+    -D BUILD_opencv_python3=OFF
+    -D WITH_OPENCL=OFF
+    -D WITH_CUDA=OFF
+    -D WITH_IPP=OFF
+    -D WITH_TBB=OFF
+    -D WITH_EIGEN=OFF
+    -D WITH_LAPACK=OFF
+    -D WITH_JPEG=OFF
+    -D WITH_PNG=OFF
+    -D WITH_TIFF=OFF
+    -D WITH_WEBP=OFF
+    -D WITH_OPENJPEG=OFF
+    -D WITH_JASPER=OFF
     -D WITH_ADE=OFF
     -D WITH_1394=OFF
     -D WITH_GTK=OFF
     -D WITH_OPENEXR=OFF
     -D WITH_PROTOBUF=OFF
     -D WITH_QUIRC=OFF
+    -D BUILD_ZLIB=OFF
+    -D BUILD_JPEG=OFF
+    -D BUILD_PNG=OFF
+    -D CV_TRACE=OFF
     -D OPENCV_ENABLE_NONFREE=OFF
 
 jobs:

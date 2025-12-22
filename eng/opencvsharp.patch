@@ -1,3 +1,13 @@
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 00000000..00000000 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.0)
++cmake_minimum_required(VERSION 3.10)
+ 
+ project(OpenCvSharpExtern)
+ 
 diff --git a/src/OpenCvSharpExtern/CMakeLists.txt b/src/OpenCvSharpExtern/CMakeLists.txt
 index 4371d2f6..13eedf05 100644
 --- a/src/OpenCvSharpExtern/CMakeLists.txt
