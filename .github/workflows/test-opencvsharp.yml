@@ -44,23 +44,44 @@ jobs:
         #include <stdint.h>
         #include <stdlib.h>
         #include <assert.h>
+        #include <string.h>
 
         typedef long long uint64;
         typedef int        ExceptionStatus;
         typedef struct { double val[4]; } MyCvScalar;
+        typedef struct { int x, y, width, height; } MyCvRect;
+        typedef struct { double x, y; } MyCvPoint2D;
+        typedef struct { double width, height, angle; } MyCvRotatedRect;
+        typedef struct { int type; int maxCount; double epsilon; } MyCvTermCriteria;
         typedef struct cv_Mat cv_Mat;
 
+        #define CV_8UC1                0        /* 8-bit unsigned, 1 channel */
         #define CV_8UC3               16        /* 8-bit unsigned, 3 channels */
+        #define CV_32FC1              5         /* 32-bit float, 1 channel */
         #define IMWRITE_JPEG_QUALITY   1
         #define IMWRITE_WEBP_QUALITY  64
+        #define TERM_CRITERIA_MAX_ITER 1
+        #define TERM_CRITERIA_EPS      2
 
         /* core */
         extern uint64         core_Mat_sizeof(void);
         extern ExceptionStatus core_Mat_new3(int rows,int cols,int type, MyCvScalar scalar, cv_Mat **returnValue);
         extern ExceptionStatus core_Mat_delete(cv_Mat *self);
+        extern ExceptionStatus core_Mat_data(cv_Mat *self, unsigned char **returnValue);
+        
+        /* imgproc */
+        extern ExceptionStatus imgproc_cvtColor(cv_Mat *src, cv_Mat *dst, int code);
+        extern ExceptionStatus imgproc_GaussianBlur(cv_Mat *src, cv_Mat *dst, int kwidth, int kheight, double sigmaX, double sigmaY, int borderType);
+        
         /* imgcodecs */
         extern ExceptionStatus imgcodecs_imwrite(const char *filename, cv_Mat *img, int *params,int paramsLength,int *returnValue);
         extern ExceptionStatus imgcodecs_imread (const char *filename,int flags, cv_Mat **returnValue);
+        
+        /* video tracking */
+        extern ExceptionStatus video_CamShift(cv_Mat *probImage, MyCvRect *window, MyCvTermCriteria criteria, MyCvRotatedRect *returnValue);
+        extern ExceptionStatus video_meanShift(cv_Mat *probImage, MyCvRect *window, MyCvTermCriteria criteria, int *returnValue);
+        extern ExceptionStatus video_calcOpticalFlowPyrLK(cv_Mat *prevImg, cv_Mat *nextImg, 
+            cv_Mat *prevPts, cv_Mat *nextPts, cv_Mat *status, cv_Mat *err);
 
         static void CHECK_OK(ExceptionStatus st, const char *msg)
         {
@@ -73,15 +94,17 @@ jobs:
 
         int main(void)
         {
+            printf("=== OpenCvSharp Video Module Test ===\n");
             printf("sizeof(Mat) reported by native = %llu\n",
                   (unsigned long long)core_Mat_sizeof());
 
+            /* Test 1: Basic image operations */
+            printf("\n[Test 1] Basic image operations\n");
             cv_Mat *img = NULL;
             MyCvScalar black = {0};
             CHECK_OK(core_Mat_new3(256, 256, CV_8UC3, black, &img), "core_Mat_new3");
 
             unsigned char *data = NULL;
-            extern ExceptionStatus core_Mat_data(cv_Mat *self, unsigned char **returnValue);
             CHECK_OK(core_Mat_data(img, &data), "core_Mat_data");
             for(int y = 0; y < 256; ++y)
             {
@@ -97,27 +120,53 @@ jobs:
             int ok = 0;
             CHECK_OK(imgcodecs_imwrite("test.png", img, NULL, 0, &ok), "imwrite PNG");
             CHECK_BOOL(ok, "imwrite PNG");
-            printf("Image saved as test.png\n");
+            printf("✓ Image saved as test.png\n");
 
             cv_Mat *img2 = NULL;
             CHECK_OK(imgcodecs_imread("test.png", /*flags=*/1, &img2), "imread PNG");
-            printf("Image loaded from test.png\n");
+            printf("✓ Image loaded from test.png\n");
 
+            /* Test 2: Video tracking - meanShift */
+            printf("\n[Test 2] Testing video_meanShift\n");
+            cv_Mat *probImage = NULL;
+            MyCvScalar white = {255, 255, 255, 0};
+            CHECK_OK(core_Mat_new3(100, 100, CV_8UC1, white, &probImage), "create probability image");
+            
+            MyCvRect trackWindow = {20, 20, 40, 40};
+            MyCvTermCriteria criteria = {TERM_CRITERIA_MAX_ITER | TERM_CRITERIA_EPS, 10, 1.0};
+            int iterations = 0;
+            CHECK_OK(video_meanShift(probImage, &trackWindow, criteria, &iterations), "video_meanShift");
+            printf("✓ meanShift completed with %d iterations\n", iterations);
+            printf("  Window: x=%d, y=%d, w=%d, h=%d\n", 
+                   trackWindow.x, trackWindow.y, trackWindow.width, trackWindow.height);
+
+            /* Test 3: Video tracking - CamShift */
+            printf("\n[Test 3] Testing video_CamShift\n");
+            MyCvRect camWindow = {20, 20, 40, 40};
+            MyCvRotatedRect rotatedRect;
+            CHECK_OK(video_CamShift(probImage, &camWindow, criteria, &rotatedRect), "video_CamShift");
+            printf("✓ CamShift completed\n");
+            printf("  RotatedRect center: (%.1f, %.1f), size: (%.1f, %.1f), angle: %.1f\n",
+                   rotatedRect.x, rotatedRect.y, rotatedRect.width, rotatedRect.height, rotatedRect.angle);
+
+            core_Mat_delete(probImage);
+
+            /* Test 4: Save test results */
+            printf("\n[Test 4] Saving test results\n");
             int jpegParams[2] = { IMWRITE_JPEG_QUALITY, 90 };
-            CHECK_OK(imgcodecs_imwrite("test.jpg", img2,
-                                      jpegParams, 2, &ok), "imwrite JPG");
+            CHECK_OK(imgcodecs_imwrite("test.jpg", img2, jpegParams, 2, &ok), "imwrite JPG");
             CHECK_BOOL(ok, "imwrite JPG");
-            printf("Image saved as test.jpg at quality: 90\n");
+            printf("✓ Image saved as test.jpg at quality: 90\n");
 
             int webpParams[2] = { IMWRITE_WEBP_QUALITY, 90 };
-            CHECK_OK(imgcodecs_imwrite("test.webp", img2,
-                                      webpParams, 2, &ok), "imwrite WEBP");
+            CHECK_OK(imgcodecs_imwrite("test.webp", img2, webpParams, 2, &ok), "imwrite WEBP");
             CHECK_BOOL(ok, "imwrite WEBP");
-            printf("Image saved as test.webp at quality: 90\n");
+            printf("✓ Image saved as test.webp at quality: 90\n");
 
             core_Mat_delete(img);
             core_Mat_delete(img2);
 
+            printf("\n=== All tests passed! ===\n");
             return 0;
         }
         EOF

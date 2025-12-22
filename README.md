@@ -1,1 +1,3 @@
-# OpenCvSharp 4 Mini Runtime 
+# OpenCvSharp 4 Runtime for OneWare Studio
+
+Includes all modules needed for OneWare

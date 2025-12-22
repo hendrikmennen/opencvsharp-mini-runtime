@@ -55,11 +55,11 @@ jobs:
       run: |
         set -euo pipefail
 
-        PKG_ID="Sdcb.OpenCvSharp4.mini.runtime.${{ matrix.os }}-${{ matrix.arch }}"
-        AUTHOR="sdcb"
+        PKG_ID="OneWare.OpenCvSharp4.runtime.${{ matrix.os }}-${{ matrix.arch }}"
+        AUTHOR="Hendrik Mennen"
         LICENSE="Apache-2.0"
-        GIT_URL="https://github.com/sdcb/opencvsharp-mini-runtime"
-        TAGS="Sdcb OpenCV OpenCvSharp OpenCvSharp4"
+        GIT_URL="https://github.com/${{ github.repository }}"
+        TAGS="OneWare OpenCV OpenCvSharp OpenCvSharp4"
         YEAR=$(date +%Y)
 
         case "${{ matrix.os }}" in
@@ -122,8 +122,8 @@ jobs:
             <title>${PKG_ID} native bindings</title>
             <authors>${AUTHOR}</authors>
             <requireLicenseAcceptance>true</requireLicenseAcceptance>
-            <description>Native binding for ${AUTHOR}.OpenCvSharp4.mini to work on ${RUNTIME_RID}.</description>
-            <summary>Native binding for ${AUTHOR}.OpenCvSharp4.mini to work on ${RUNTIME_RID}.</summary>
+            <description>Native binding for OneWare.OpenCvSharp4 to work on ${RUNTIME_RID}.</description>
+            <summary>Native binding for OneWare.OpenCvSharp4 to work on ${RUNTIME_RID}.</summary>
             <copyright>Copyright ${YEAR}</copyright>
             <license type="expression">${LICENSE}</license>
             <projectUrl>${GIT_URL}</projectUrl>
@@ -199,7 +199,7 @@ jobs:
 
           dotnet add package OpenCvSharp4
           dotnet nuget add source ../nupkg --name local
-          dotnet add package Sdcb.OpenCvSharp4.mini.runtime.${{ matrix.os }}-${{ matrix.arch }} --source ../nupkg
+          dotnet add package OneWare.OpenCvSharp4.runtime.${{ matrix.os }}-${{ matrix.arch }} --source ../nupkg
 
       - name: Write test code
         run: |
