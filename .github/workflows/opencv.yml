@@ -88,15 +88,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config \
             libavcodec-dev libavformat-dev libswscale-dev \
-            libv4l-dev v4l-utils
+            libv4l-dev v4l-utils \
+            libudev-dev libusb-1.0-0-dev
         fi
 
     - name: Configure OpenCV
       run: |
         EXTRA_ARGS=""
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
-          # Linux: Enable FFmpeg and V4L (disable GStreamer to avoid linking issues)
-          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
+          # Linux: Enable V4L2 only for camera capture
+          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_LIBV4L=ON -D WITH_AVFOUNDATION=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D VIDEOIO_ENABLE_PLUGINS=ON"
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           # macOS: Use AVFoundation only (FFmpeg 8.x has API incompatibilities)
           EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=ON"
@@ -111,7 +113,18 @@ jobs:
         fi
         
         cd opencv && mkdir build && cd build
+        echo "Configuring with args: ${{ env.OPENCV_CMAKE_ARGS_BASE }} $EXTRA_ARGS"
         cmake ${{ env.OPENCV_CMAKE_ARGS_BASE }} $EXTRA_ARGS ..
+
+    - name: Show Configuration Summary
+      run: |
+        cd opencv/build
+        echo "=== OpenCV Configuration Summary ==="
+        grep -A 20 "Video I/O:" CMakeCache.txt || echo "Video I/O section not found"
+        echo "=== V4L Support ==="
+        grep "WITH_V4L" CMakeCache.txt || echo "V4L config not found"
+        echo "=== FFmpeg Support ==="
+        grep "WITH_FFMPEG" CMakeCache.txt || echo "FFmpeg config not found"
 
     - name: Build OpenCV
       run: |
