@@ -27,8 +27,8 @@ jobs:
         - { os: ubuntu.24.04, arch: arm64, upstream: ubuntu.24.04-arm64 }
         - { os: osx,          arch: x64,   upstream: osx-x64 }
         - { os: osx,          arch: arm64, upstream: osx-arm64 }
-        #- { os: win,          arch: x64,   upstream: win-x64 }
-        #- { os: win,          arch: arm64, upstream: win-arm64 }
+        - { os: win,          arch: x64,   upstream: win-x64 }
+        - { os: win,          arch: arm64, upstream: win-arm64 }
 
     steps:
     - name: Download OpenCvSharp Artifacts
