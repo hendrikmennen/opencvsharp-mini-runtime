@@ -27,7 +27,7 @@ index 4371d2f6..13eedf05 100644
  ENDIF()
  
 -file(GLOB OPENCVSHARP_FILES *.cpp)
-+file(GLOB OPENCVSHARP_FILES core*.cpp imgp*.cpp imgc*.cpp std*.cpp)
++file(GLOB OPENCVSHARP_FILES core*.cpp imgp*.cpp video*.cpp std*.cpp)
  
  find_package(OpenCV REQUIRED)
  

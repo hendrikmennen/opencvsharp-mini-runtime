@@ -86,7 +86,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config \
             libavcodec-dev libavformat-dev libswscale-dev \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             libv4l-dev v4l-utils
         fi
 
@@ -94,8 +93,8 @@ jobs:
       run: |
         EXTRA_ARGS=""
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
-          # Linux: Enable FFmpeg, GStreamer, and V4L
-          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=ON -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
+          # Linux: Enable FFmpeg and V4L (disable GStreamer to avoid linking issues)
+          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           # macOS: Use AVFoundation only (FFmpeg 8.x has API incompatibilities)
           EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=ON"
