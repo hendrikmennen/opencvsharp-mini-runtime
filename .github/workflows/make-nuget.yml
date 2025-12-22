@@ -1,9 +1,9 @@
 name: Make-NuGet
 
 on:
-  push:
-    branches: [ main ]
-    paths: [ '.github/workflows/make-nuget.yml' ]
+  #push:
+  #  branches: [ main ]
+  #  paths: [ '.github/workflows/make-nuget.yml' ]
   workflow_dispatch:
 
 env:
