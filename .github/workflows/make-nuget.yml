@@ -27,6 +27,8 @@ jobs:
         - { os: ubuntu.24.04, arch: arm64, upstream: ubuntu.24.04-arm64 }
         - { os: osx,          arch: x64,   upstream: osx-x64 }
         - { os: osx,          arch: arm64, upstream: osx-arm64 }
+        - { os: win,          arch: x64,   upstream: win-x64 }
+        - { os: win,          arch: arm64, upstream: win-arm64 }
 
     steps:
     - name: Download OpenCvSharp Artifacts
@@ -159,8 +161,8 @@ jobs:
         path: nupkgs/*.nupkg
         if-no-files-found: error
 
-  upload-nuget:
-    name: Upload NuGet
+  push-nuget:
+    name: Push to NuGet.org
     needs: make-nuget
     runs-on: ubuntu-24.04
 
@@ -177,15 +179,15 @@ jobs:
           ls -lR nupkgs
           echo "::endgroup::"
 
-      - name: Upload to NuGet
+      - name: Push to NuGet.org
         run: |
           set -euo pipefail
-          echo "Uploading to NuGet..."
+          echo "Pushing to NuGet.org..."
           for nupkg in nupkgs/*.nupkg; do
-            echo "Uploading $nupkg"
-            dotnet nuget push "$nupkg" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}" --api-key "${{ secrets.GITHUB_TOKEN }}" --skip-duplicate
+            echo "Pushing $nupkg"
+            dotnet nuget push "$nupkg" --source https://api.nuget.org/v3/index.json --api-key "${{ secrets.NUGET_API_KEY }}" --skip-duplicate
           done
-          echo "Upload completed."
+          echo "Push completed."
 
       - name: Bundle upload
         uses: actions/upload-artifact@v4
