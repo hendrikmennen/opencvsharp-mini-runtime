@@ -72,7 +72,10 @@ jobs:
         OpenCV_DIR="${{ github.workspace }}/opencv/lib/cmake/opencv4"
         
         cd opencvsharp && mkdir build && cd build
-        cmake \\\n          -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencvsharp/build" \\\n          -D OpenCV_DIR="$OpenCV_DIR" \\\n          ../src
+        cmake \
+          -D CMAKE_INSTALL_PREFIX="${{ github.workspace }}/opencvsharp/build" \
+          -D OpenCV_DIR="$OpenCV_DIR" \
+          ../src
 
     - name: Build OpenCvSharp
       run: |

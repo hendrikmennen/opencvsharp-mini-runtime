@@ -69,7 +69,10 @@ jobs:
       run: |
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config \\\n            libavcodec-dev libavformat-dev libswscale-dev \\\n            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \\\n            libv4l-dev v4l-utils
+          sudo apt-get install -y build-essential cmake pkg-config \
+            libavcodec-dev libavformat-dev libswscale-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libv4l-dev v4l-utils
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           brew install pkg-config ffmpeg
         fi
