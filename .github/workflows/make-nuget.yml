@@ -151,9 +151,6 @@ jobs:
         ls -l "${{ github.workspace }}/nupkgs"
         echo "::endgroup::"
 
-    # ------------------------------------------------------------
-    # 3. 上传结果
-    # ------------------------------------------------------------
     - name: Upload nupkg artifact
       uses: actions/upload-artifact@v4
       with:

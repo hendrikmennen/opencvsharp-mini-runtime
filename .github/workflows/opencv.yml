@@ -83,7 +83,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config \
             libv4l-dev v4l-utils \
-            libcamera-dev
+            libcamera-dev \
+            libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavresample-dev
         fi
 
     - name: Configure OpenCV
@@ -92,9 +93,10 @@ jobs:
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           # Linux: V4L for camera support + FFmpeg for MP4/video file support (self-contained static build)
           # Also enable libcamera for Raspberry Pi camera support
-          # Use OpenCV's built-in FFmpeg via 3rdparty (will download and build automatically)
+          # Use system FFmpeg libraries for codec support
           EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_LIBCAMERA=ON -D WITH_AVFOUNDATION=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D BUILD_opencv_world=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D BUILD_opencv_videoio=ON"
 
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           # macOS: AVFoundation-only, no videoio plugins (hardened runtime compatible)
