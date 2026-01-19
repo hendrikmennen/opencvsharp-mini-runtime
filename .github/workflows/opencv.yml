@@ -89,8 +89,8 @@ jobs:
       run: |
         EXTRA_ARGS=""
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
-          # Linux: V4L only for camera support
-          EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
+          # Linux: V4L for camera support + FFmpeg for MP4/video file support (self-contained build)
+          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
 
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           # macOS: AVFoundation-only, no videoio plugins (hardened runtime compatible)
