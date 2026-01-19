@@ -82,15 +82,46 @@ jobs:
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config \
-            libv4l-dev v4l-utils
+            libv4l-dev v4l-utils yasm nasm
         fi
+
+    - name: Build FFmpeg Static (Linux only)
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        wget -q https://ffmpeg.org/releases/ffmpeg-6.1.tar.xz
+        tar xf ffmpeg-6.1.tar.xz
+        cd ffmpeg-6.1
+        ./configure \
+          --prefix="${{ github.workspace }}/ffmpeg-build" \
+          --enable-static \
+          --disable-shared \
+          --enable-pic \
+          --disable-programs \
+          --disable-doc \
+          --disable-network \
+          --disable-avdevice \
+          --disable-postproc \
+          --disable-avfilter \
+          --enable-decoder=h264,hevc,mpeg4,vp8,vp9 \
+          --enable-encoder=h264,mpeg4 \
+          --enable-demuxer=mov,mp4,avi,matroska \
+          --enable-muxer=mp4,avi \
+          --enable-parser=h264,hevc,mpeg4video \
+          --enable-protocol=file
+        make -j$(nproc)
+        make install
 
     - name: Configure OpenCV
       run: |
         EXTRA_ARGS=""
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
-          # Linux: V4L for camera support + FFmpeg for MP4/video file support (self-contained build)
+          # Linux: V4L for camera support + FFmpeg for MP4/video file support (self-contained static build)
+          FFMPEG_ROOT="${{ github.workspace }}/ffmpeg-build"
+          export PKG_CONFIG_PATH="${FFMPEG_ROOT}/lib/pkgconfig:${PKG_CONFIG_PATH}"
           EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_DIR=${FFMPEG_ROOT}"
+          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_INCLUDE_DIRS=${FFMPEG_ROOT}/include"
+          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_LIBRARIES=${FFMPEG_ROOT}/lib"
 
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           # macOS: AVFoundation-only, no videoio plugins (hardened runtime compatible)
