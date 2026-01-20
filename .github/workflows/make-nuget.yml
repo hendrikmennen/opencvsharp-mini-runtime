@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  NUGET_VERSION_PREFIX: 4.12.0
+  NUGET_VERSION_PREFIX: 4.13.0
 
 permissions:
   packages: write
@@ -124,8 +124,8 @@ jobs:
             <title>${PKG_ID} native bindings</title>
             <authors>${AUTHOR}</authors>
             <requireLicenseAcceptance>true</requireLicenseAcceptance>
-            <description>Native binding for OneWare.OpenCvSharp4 to work on ${RUNTIME_RID}.</description>
-            <summary>Native binding for OneWare.OpenCvSharp4 to work on ${RUNTIME_RID}.</summary>
+            <description>Native binding for OpenCvSharp4 to work on ${RUNTIME_RID}.</description>
+            <summary>Native binding for OpenCvSharp4 to work on ${RUNTIME_RID}.</summary>
             <copyright>Copyright ${YEAR}</copyright>
             <license type="expression">${LICENSE}</license>
             <projectUrl>${GIT_URL}</projectUrl>
