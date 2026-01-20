@@ -202,6 +202,15 @@ jobs:
       run: |
         mkdir artifacts
         cp -r opencv/build/install/* artifacts
+        
+        # Include FFmpeg static libraries for Linux builds
+        if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
+          echo "Including FFmpeg static libraries in artifacts..."
+          mkdir -p artifacts/lib/ffmpeg
+          cp -r ${{ github.workspace }}/ffmpeg-install/lib/*.a artifacts/lib/ffmpeg/
+          echo "FFmpeg libraries included:"
+          ls -la artifacts/lib/ffmpeg/
+        fi
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4

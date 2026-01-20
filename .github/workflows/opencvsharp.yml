@@ -85,6 +85,19 @@ jobs:
             set -- "$@" -A x64
           fi
         fi
+        
+        # Set FFmpeg library path for Linux builds
+        if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
+          FFMPEG_LIB_DIR="${{ github.workspace }}/opencv/lib/ffmpeg"
+          if [[ -d "$FFMPEG_LIB_DIR" ]]; then
+            echo "FFmpeg libraries found at: $FFMPEG_LIB_DIR"
+            ls -la "$FFMPEG_LIB_DIR"
+            # Create symlinks in opencv lib directory for CMake to find them
+            ln -sf $FFMPEG_LIB_DIR/*.a ${{ github.workspace }}/opencv/lib/
+          else
+            echo "Warning: FFmpeg libraries not found at $FFMPEG_LIB_DIR"
+          fi
+        fi
 
         cd opencvsharp && mkdir build && cd build
         cmake \
