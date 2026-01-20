@@ -87,52 +87,41 @@ jobs:
         fi
 
     - name: Build FFmpeg (static)
-      if: matrix.os == 'ubuntu.24.04' || matrix.os == 'win'
+      if: matrix.os == 'ubuntu.24.04'
       run: |
         # Download and build FFmpeg statically
         cd ${{ github.workspace }}
+        wget -q https://ffmpeg.org/releases/ffmpeg-6.1.tar.xz
+        tar -xf ffmpeg-6.1.tar.xz
+        cd ffmpeg-6.1
         
-        if [[ "${{ matrix.os }}" =~ ^win ]]; then
-          # Windows: Download pre-built static FFmpeg libraries
-          curl -L -o ffmpeg-shared.zip https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n6.1-latest-win64-lgpl-shared-6.1.zip
-          unzip -q ffmpeg-shared.zip
-          mv ffmpeg-n6.1-latest-win64-lgpl-shared-6.1 ffmpeg-install
-        else
-          # Linux: Build from source
-          wget -q https://ffmpeg.org/releases/ffmpeg-6.1.tar.xz
-          tar -xf ffmpeg-6.1.tar.xz
-          cd ffmpeg-6.1
-        fi
-        
-        if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
         # Configure FFmpeg for static build with PIC for shared library linking
         # Disable ASM to avoid PIC issues with assembly code
-          ./configure \
-            --prefix=${{ github.workspace }}/ffmpeg-install \
-            --enable-static \
-            --disable-shared \
-            --enable-pic \
-            --disable-asm \
-            --disable-programs \
-            --disable-doc \
-            --disable-network \
-            --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mjpeg,h263,png \
-            --enable-decoder=aac,mp3 \
-            --enable-parser=h264,hevc,mpeg4video,vp8,vp9 \
-            --enable-demuxer=mov,matroska,avi,mp4,m4v \
-            --enable-protocol=file \
-            --enable-zlib
-          
-          make -j$(nproc)
-          make install
-          
-          echo "FFmpeg installed to: ${{ github.workspace }}/ffmpeg-install"
-          ls -lR ${{ github.workspace }}/ffmpeg-install
-          
-          # Verify pkg-config files exist
-          echo "Checking pkg-config files..."
-          ls -la ${{ github.workspace }}/ffmpeg-install/lib/pkgconfig/
-        fi
+        ./configure \
+          --prefix=${{ github.workspace }}/ffmpeg-install \
+          --enable-static \
+          --disable-shared \
+          --enable-pic \
+          --disable-asm \
+          --disable-programs \
+          --disable-doc \
+          --disable-network \
+          --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mjpeg,h263,png \
+          --enable-decoder=aac,mp3 \
+          --enable-parser=h264,hevc,mpeg4video,vp8,vp9 \
+          --enable-demuxer=mov,matroska,avi,mp4,m4v \
+          --enable-protocol=file \
+          --enable-zlib
+        
+        make -j$(nproc)
+        make install
+        
+        echo "FFmpeg installed to: ${{ github.workspace }}/ffmpeg-install"
+        ls -lR ${{ github.workspace }}/ffmpeg-install
+        
+        # Verify pkg-config files exist
+        echo "Checking pkg-config files..."
+        ls -la ${{ github.workspace }}/ffmpeg-install/lib/pkgconfig/
 
     - name: Configure OpenCV
       run: |
@@ -161,13 +150,9 @@ jobs:
           EXTRA_ARGS="$EXTRA_ARGS -D CMAKE_OSX_DEPLOYMENT_TARGET=10.15"
 
         elif [[ "${{ matrix.os }}" =~ ^win ]]; then
-          # Windows: Use FFmpeg for video file support (portable, no codec dependencies) + DirectShow for camera
-          FFMPEG_DIR="${{ github.workspace }}/ffmpeg-install"
-          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=OFF"
+          # Windows: Use MSMF and DirectShow for camera access
+          EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D WITH_DSHOW=ON"
-          EXTRA_ARGS="$EXTRA_ARGS -D WITH_MSMF=OFF"
-          EXTRA_ARGS="$EXTRA_ARGS -D OPENCV_FFMPEG_USE_FIND_PACKAGE=ON"
-          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_DIR=$FFMPEG_DIR"
           if [[ "${{ matrix.arch }}" == "arm64" ]]; then
             EXTRA_ARGS="$EXTRA_ARGS -D WITH_IPP=OFF -D CPU_BASELINE=NEON -A ARM64"
           else
@@ -220,19 +205,13 @@ jobs:
         mkdir artifacts
         cp -r opencv/build/install/* artifacts
         
-        # Include FFmpeg libraries for Linux and Windows builds
+        # Include FFmpeg static libraries for Linux builds
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           echo "Including FFmpeg static libraries in artifacts..."
           mkdir -p artifacts/lib/ffmpeg
           cp -r ${{ github.workspace }}/ffmpeg-install/lib/*.a artifacts/lib/ffmpeg/
           echo "FFmpeg libraries included:"
           ls -la artifacts/lib/ffmpeg/
-        elif [[ "${{ matrix.os }}" =~ ^win ]]; then
-          echo "Including FFmpeg DLLs in artifacts..."
-          mkdir -p artifacts/bin/ffmpeg
-          cp ${{ github.workspace }}/ffmpeg-install/bin/*.dll artifacts/bin/ffmpeg/ || true
-          echo "FFmpeg DLLs included:"
-          ls -la artifacts/bin/ffmpeg/ || echo "No DLLs found"
         fi
 
     - name: Upload Artifacts
