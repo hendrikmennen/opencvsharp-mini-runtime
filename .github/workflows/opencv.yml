@@ -95,7 +95,7 @@ jobs:
         tar -xf ffmpeg-6.1.tar.xz
         cd ffmpeg-6.1
         
-        # Configure FFmpeg for minimal static build
+        # Configure FFmpeg for static build with necessary features for OpenCV
         ./configure \
           --prefix=${{ github.workspace }}/ffmpeg-install \
           --enable-static \
@@ -103,24 +103,23 @@ jobs:
           --enable-pic \
           --disable-programs \
           --disable-doc \
-          --disable-avdevice \
-          --disable-postproc \
-          --disable-avfilter \
           --disable-network \
-          --disable-encoders \
-          --disable-muxers \
-          --disable-devices \
-          --disable-filters \
-          --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mjpeg \
+          --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mjpeg,h263,png \
           --enable-decoder=aac,mp3 \
-          --enable-demuxer=mov,matroska,avi,mp4 \
-          --enable-protocol=file
+          --enable-parser=h264,hevc,mpeg4video,vp8,vp9 \
+          --enable-demuxer=mov,matroska,avi,mp4,m4v \
+          --enable-protocol=file \
+          --enable-zlib
         
         make -j$(nproc)
         make install
         
         echo "FFmpeg installed to: ${{ github.workspace }}/ffmpeg-install"
         ls -lR ${{ github.workspace }}/ffmpeg-install
+        
+        # Verify pkg-config files exist
+        echo "Checking pkg-config files..."
+        ls -la ${{ github.workspace }}/ffmpeg-install/lib/pkgconfig/
 
     - name: Configure OpenCV
       run: |
@@ -130,12 +129,14 @@ jobs:
           # GStreamer disabled for maximum portability (no runtime dependencies)
           # Use custom-built static FFmpeg to avoid runtime dependencies
           FFMPEG_DIR="${{ github.workspace }}/ffmpeg-install"
+          export PKG_CONFIG_PATH="$FFMPEG_DIR/lib/pkgconfig:$PKG_CONFIG_PATH"
+          
           EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
-          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_DIR=$FFMPEG_DIR"
-          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_INCLUDE_DIRS=$FFMPEG_DIR/include"
-          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_LIB_DIR=$FFMPEG_DIR/lib"
+          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_ROOT=$FFMPEG_DIR"
+          EXTRA_ARGS="$EXTRA_ARGS -D PKG_CONFIG_PATH=$FFMPEG_DIR/lib/pkgconfig"
           EXTRA_ARGS="$EXTRA_ARGS -D BUILD_opencv_world=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D BUILD_opencv_videoio=ON"
+          EXTRA_ARGS="$EXTRA_ARGS -D VIDEOIO_ENABLE_STRICT_PLUGIN_CHECK=OFF"
 
         elif [[ "${{ matrix.os }}" =~ ^osx ]]; then
           # macOS: AVFoundation-only, no videoio plugins (hardened runtime compatible)
@@ -165,11 +166,15 @@ jobs:
       run: |
         cd opencv/build
         echo "=== OpenCV Configuration Summary ==="
-        grep -A 20 "Video I/O:" CMakeCache.txt || echo "Video I/O section not found"
-        echo "=== V4L Support ==="
-        grep "WITH_V4L" CMakeCache.txt || echo "V4L config not found"
-        echo "=== FFmpeg Support ==="
-        grep "WITH_FFMPEG" CMakeCache.txt || echo "FFmpeg config not found"
+        echo "--- Video I/O Support ---"
+        grep "WITH_FFMPEG" CMakeCache.txt || echo "FFmpeg: not found"
+        grep "WITH_GSTREAMER" CMakeCache.txt || echo "GStreamer: not found"
+        grep "WITH_V4L" CMakeCache.txt || echo "V4L: not found"
+        grep "WITH_AVFOUNDATION" CMakeCache.txt || echo "AVFoundation: not found"
+        echo "--- FFmpeg Libraries ---"
+        grep "FFMPEG.*LIBRARY" CMakeCache.txt || echo "FFmpeg libraries: not configured"
+        echo "--- VideoIO Module ---"
+        grep "BUILD_opencv_videoio" CMakeCache.txt || echo "VideoIO module: not found"
 
     - name: Build OpenCV
       run: |
