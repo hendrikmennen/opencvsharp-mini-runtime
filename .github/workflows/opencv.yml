@@ -83,7 +83,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config \
             libv4l-dev v4l-utils \
-            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
             libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
         fi
 
@@ -91,10 +90,10 @@ jobs:
       run: |
         EXTRA_ARGS=""
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
-          # Linux: V4L for camera support + FFmpeg for MP4/video file support (self-contained static build)
-          # Enable GStreamer for Raspberry Pi camera support
+          # Linux: V4L2 for camera support + FFmpeg for MP4/video file support (self-contained static build)
+          # GStreamer disabled for maximum portability (no runtime dependencies)
           # Use system FFmpeg libraries for codec support
-          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=ON -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
+          EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D BUILD_opencv_world=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D BUILD_opencv_videoio=ON"
 
