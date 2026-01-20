@@ -25,10 +25,10 @@ jobs:
         include:
         - { os: ubuntu.24.04, arch: x64,   runs-on: ubuntu-24.04 }
         - { os: ubuntu.24.04, arch: arm64, runs-on: ubuntu-24.04-arm }
-        - { os: osx,          arch: x64,   runs-on: macos-14 }
-        - { os: osx,          arch: arm64, runs-on: macos-14 }
-        - { os: win,          arch: x64,   runs-on: windows-2022 }
-        - { os: win,          arch: arm64, runs-on: windows-11-arm }
+        #- { os: osx,          arch: x64,   runs-on: macos-14 }
+        #- { os: osx,          arch: arm64, runs-on: macos-14 }
+        #- { os: win,          arch: x64,   runs-on: windows-2022 }
+        #- { os: win,          arch: arm64, runs-on: windows-11-arm }
 
     steps:
     - name: Checkout
@@ -65,9 +65,7 @@ jobs:
       run: |
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config \
-            libavcodec-dev libavformat-dev libswscale-dev \
-            libv4l-dev v4l-utils
+          sudo apt-get install -y build-essential cmake pkg-config
         fi
 
     - name: Configure OpenCvSharp

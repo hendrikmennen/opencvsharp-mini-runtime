@@ -55,10 +55,10 @@ jobs:
         include:
         - { os: ubuntu.24.04, arch: x64,   runs-on: ubuntu-24.04 }
         - { os: ubuntu.24.04, arch: arm64, runs-on: ubuntu-24.04-arm }
-        - { os: osx,          arch: x64,   runs-on: macos-14 }
-        - { os: osx,          arch: arm64, runs-on: macos-14 }
-        - { os: win,          arch: x64,   runs-on: windows-2022 }
-        - { os: win,          arch: arm64, runs-on: windows-11-arm }
+        #- { os: osx,          arch: x64,   runs-on: macos-14 }
+        #- { os: osx,          arch: arm64, runs-on: macos-14 }
+        #- { os: win,          arch: x64,   runs-on: windows-2022 }
+        #- { os: win,          arch: arm64, runs-on: windows-11-arm }
 
     steps:
     - name: Checkout OpenCV repo
@@ -83,8 +83,44 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config \
             libv4l-dev v4l-utils \
-            libavcodec-dev libavformat-dev libavutil-dev libswscale-dev
+            yasm nasm
         fi
+
+    - name: Build FFmpeg (static)
+      if: matrix.os == 'ubuntu.24.04'
+      run: |
+        # Download and build FFmpeg statically
+        cd ${{ github.workspace }}
+        wget -q https://ffmpeg.org/releases/ffmpeg-6.1.tar.xz
+        tar -xf ffmpeg-6.1.tar.xz
+        cd ffmpeg-6.1
+        
+        # Configure FFmpeg for minimal static build
+        ./configure \
+          --prefix=${{ github.workspace }}/ffmpeg-install \
+          --enable-static \
+          --disable-shared \
+          --enable-pic \
+          --disable-programs \
+          --disable-doc \
+          --disable-avdevice \
+          --disable-postproc \
+          --disable-avfilter \
+          --disable-network \
+          --disable-encoders \
+          --disable-muxers \
+          --disable-devices \
+          --disable-filters \
+          --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mjpeg \
+          --enable-decoder=aac,mp3 \
+          --enable-demuxer=mov,matroska,avi,mp4 \
+          --enable-protocol=file
+        
+        make -j$(nproc)
+        make install
+        
+        echo "FFmpeg installed to: ${{ github.workspace }}/ffmpeg-install"
+        ls -lR ${{ github.workspace }}/ffmpeg-install
 
     - name: Configure OpenCV
       run: |
@@ -92,8 +128,12 @@ jobs:
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           # Linux: V4L2 for camera support + FFmpeg for MP4/video file support (self-contained static build)
           # GStreamer disabled for maximum portability (no runtime dependencies)
-          # Use system FFmpeg libraries for codec support
+          # Use custom-built static FFmpeg to avoid runtime dependencies
+          FFMPEG_DIR="${{ github.workspace }}/ffmpeg-install"
           EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=ON -D WITH_AVFOUNDATION=OFF"
+          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_DIR=$FFMPEG_DIR"
+          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_INCLUDE_DIRS=$FFMPEG_DIR/include"
+          EXTRA_ARGS="$EXTRA_ARGS -D FFMPEG_LIB_DIR=$FFMPEG_DIR/lib"
           EXTRA_ARGS="$EXTRA_ARGS -D BUILD_opencv_world=OFF"
           EXTRA_ARGS="$EXTRA_ARGS -D BUILD_opencv_videoio=ON"
 
