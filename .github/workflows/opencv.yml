@@ -95,12 +95,14 @@ jobs:
         tar -xf ffmpeg-6.1.tar.xz
         cd ffmpeg-6.1
         
-        # Configure FFmpeg for static build with necessary features for OpenCV
+        # Configure FFmpeg for static build with PIC for shared library linking
+        # Disable ASM to avoid PIC issues with assembly code
         ./configure \
           --prefix=${{ github.workspace }}/ffmpeg-install \
           --enable-static \
           --disable-shared \
           --enable-pic \
+          --disable-asm \
           --disable-programs \
           --disable-doc \
           --disable-network \
