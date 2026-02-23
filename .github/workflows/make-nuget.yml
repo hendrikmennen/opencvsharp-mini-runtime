@@ -93,6 +93,10 @@ jobs:
           "$WORK/build/net45"
 
         cp "$LIB_SRC" "$WORK/runtimes/${RUNTIME_RID}/native/"
+        if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          # Include all native runtime DLLs (e.g. opencv_videoio_ffmpeg*.dll).
+          cp "${{ github.workspace }}/opencvsharp/lib/"*.dll "$WORK/runtimes/${RUNTIME_RID}/native/"
+        fi
         touch "$WORK/lib/netstandard2.0/_._"
         cp "$WORK/lib/netstandard2.0/_._" "$WORK/lib/net45/_._"
 
@@ -106,8 +110,8 @@ jobs:
           </PropertyGroup>
         
           <ItemGroup Condition="\$(TargetFrameworkVersion.StartsWith('v4')) Or \$(TargetFramework.StartsWith('net4'))">
-            <Content Include="\$(${NORMALIZED_NAME})\\${RUNTIME_RID}\\native\\${LIB_NAME}">
-              <Link>dll\\${{ matrix.arch }}\\${LIB_NAME}</Link>
+            <Content Include="\$(${NORMALIZED_NAME})\\${RUNTIME_RID}\\native\\*.dll">
+              <Link>dll\\${{ matrix.arch }}\\%(Filename)%(Extension)</Link>
               <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             </Content>
           </ItemGroup>
@@ -137,7 +141,7 @@ jobs:
           <files>
             <file src="lib\\netstandard2.0\\_._" target="lib\\netstandard2.0" />
             <file src="lib\\net45\\_._"          target="lib\\net45" />
-            <file src="runtimes\\${RUNTIME_RID}\\native\\${LIB_NAME}" target="runtimes\\${RUNTIME_RID}\\native" />
+            <file src="runtimes\\${RUNTIME_RID}\\native\\*" target="runtimes\\${RUNTIME_RID}\\native" />
             <file src="build\\net45\\${PKG_ID}.props" target="build\\net45" />
           </files>
         </package>

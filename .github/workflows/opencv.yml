@@ -150,8 +150,13 @@ jobs:
           EXTRA_ARGS="$EXTRA_ARGS -D CMAKE_OSX_DEPLOYMENT_TARGET=10.15"
 
         elif [[ "${{ matrix.os }}" =~ ^win ]]; then
-          # Windows: Use MSMF and DirectShow for camera access
-          EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=OFF"
+          # Windows: Enable FFmpeg on x64 for deterministic MP4 support.
+          # Keep DShow for camera access and fall back to non-FFmpeg on arm64.
+          if [[ "${{ matrix.arch }}" == "arm64" ]]; then
+            EXTRA_ARGS="-D WITH_FFMPEG=OFF -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=OFF"
+          else
+            EXTRA_ARGS="-D WITH_FFMPEG=ON -D WITH_GSTREAMER=OFF -D WITH_V4L=OFF -D WITH_AVFOUNDATION=OFF"
+          fi
           EXTRA_ARGS="$EXTRA_ARGS -D WITH_DSHOW=ON"
           if [[ "${{ matrix.arch }}" == "arm64" ]]; then
             EXTRA_ARGS="$EXTRA_ARGS -D WITH_IPP=OFF -D CPU_BASELINE=NEON -A ARM64"
@@ -205,6 +210,15 @@ jobs:
         mkdir artifacts
         cp -r opencv/build/install/* artifacts
         
+        # Include FFmpeg videoio runtime DLLs for Windows builds.
+        # These DLLs are loaded at runtime and are not always copied to the install tree for static builds.
+        if [[ "${{ matrix.os }}" =~ ^win ]]; then
+          mkdir -p artifacts/ffmpeg
+          find opencv/build -type f -iname "opencv_videoio_ffmpeg*.dll" -print -exec cp -v {} artifacts/ffmpeg/ \; || true
+          echo "Windows FFmpeg videoio DLLs included:"
+          ls -la artifacts/ffmpeg || true
+        fi
+
         # Include FFmpeg static libraries for Linux builds
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           echo "Including FFmpeg static libraries in artifacts..."

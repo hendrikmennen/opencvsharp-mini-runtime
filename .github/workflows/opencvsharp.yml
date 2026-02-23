@@ -163,6 +163,12 @@ jobs:
         mkdir artifacts && cd artifacts && mkdir lib test
         if [[ "${{ matrix.os }}" =~ ^win ]]; then
           cp -r ../opencvsharp/build/OpenCvSharpExtern/Release/OpenCvSharpExtern.* ./lib
+          # Include OpenCV FFmpeg runtime DLL(s) so file-video decoding works on target machines.
+          if [[ -d ../opencv/ffmpeg ]]; then
+            cp -v ../opencv/ffmpeg/opencv_videoio_ffmpeg*.dll ./lib/ || true
+          else
+            echo "No ../opencv/ffmpeg directory found; skipping FFmpeg runtime DLL copy."
+          fi
         else
           cp -r ../opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.* ./lib
         fi
