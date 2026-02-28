@@ -65,7 +65,7 @@ jobs:
       run: |
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config libx264-dev
+          sudo apt-get install -y build-essential cmake pkg-config patchelf libx264-dev
         fi
 
     - name: Configure OpenCvSharp
@@ -139,6 +139,14 @@ jobs:
         echo "Size after strip:"
         du -h "$BIN"
 
+    - name: Set Linux Runtime RPATH
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        set -eux
+        BIN="opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.so"
+        patchelf --set-rpath '$ORIGIN' "$BIN"
+        patchelf --print-rpath "$BIN"
+
     - name: Show OpenCvSharp Artifacts
       run: |
         cd opencvsharp/build
@@ -169,6 +177,17 @@ jobs:
           else
             echo "No ../opencv/ffmpeg directory found; skipping FFmpeg runtime DLL copy."
           fi
+        elif [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
+          cp -r ../opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.* ./lib
+
+          # Bundle libx264 for desktop runtime machines that don't have it preinstalled.
+          X264_PATH="$(ldconfig -p | awk '/libx264\\.so\\.[0-9]+/{print $4; exit}')"
+          if [[ -z "${X264_PATH:-}" || ! -f "$X264_PATH" ]]; then
+            echo "::error::Could not locate libx264 shared library on runner"
+            ldconfig -p | grep -i x264 || true
+            exit 1
+          fi
+          cp -v "$X264_PATH" ./lib/
         else
           cp -r ../opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.* ./lib
         fi

@@ -96,6 +96,9 @@ jobs:
         if [[ "${{ matrix.os }}" =~ ^win ]]; then
           # Include all native runtime DLLs (e.g. opencv_videoio_ffmpeg*.dll).
           cp "${{ github.workspace }}/opencvsharp/lib/"*.dll "$WORK/runtimes/${RUNTIME_RID}/native/"
+        elif [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
+          # Include bundled Linux shared library dependencies (e.g. libx264.so.*).
+          cp "${{ github.workspace }}/opencvsharp/lib/"*.so* "$WORK/runtimes/${RUNTIME_RID}/native/"
         fi
         touch "$WORK/lib/netstandard2.0/_._"
         cp "$WORK/lib/netstandard2.0/_._" "$WORK/lib/net45/_._"
