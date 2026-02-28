@@ -82,6 +82,7 @@ jobs:
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config \
+            libx264-dev \
             libv4l-dev v4l-utils \
             yasm nasm
         fi
@@ -102,16 +103,25 @@ jobs:
           --enable-static \
           --disable-shared \
           --enable-pic \
+          --enable-gpl \
+          --enable-libx264 \
           --disable-asm \
           --disable-programs \
           --disable-doc \
           --disable-network \
+          --enable-encoder=libx264,mpeg4,mjpeg \
+          --disable-encoder=h264_v4l2m2m \
           --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mjpeg,h263,png \
           --enable-decoder=aac,mp3 \
           --enable-parser=h264,hevc,mpeg4video,vp8,vp9 \
           --enable-demuxer=mov,matroska,avi,mp4,m4v \
           --enable-protocol=file \
           --enable-zlib
+
+        # Validate Linux encoder setup for desktop runtime use:
+        # prefer software H.264 (libx264), avoid hardware-only v4l2m2m.
+        grep -q '^CONFIG_LIBX264_ENCODER=yes' ffbuild/config.mak
+        grep -q '^CONFIG_H264_V4L2M2M_ENCODER=no' ffbuild/config.mak
         
         make -j$(nproc)
         make install

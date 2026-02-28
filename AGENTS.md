@@ -5,6 +5,9 @@ This repository builds and publishes slim native OpenCvSharp runtime packages fo
 
 The repo does not contain the full OpenCvSharp/OpenCV source trees. Instead, CI pulls upstream sources and applies local workflow + patch customizations.
 
+Important: produced NuGet packages are consumed by a desktop app runtime, not only CI.
+Prioritize runtime portability and end-user machine behavior over CI-only success.
+
 ## Repository Layout
 - `.github/workflows/opencv.yml`: builds OpenCV artifacts per OS/arch.
 - `.github/workflows/opencvsharp.yml`: downloads OpenCV artifacts, checks out upstream OpenCvSharp, applies `eng/opencvsharp.patch`, builds `OpenCvSharpExtern`, uploads artifacts.
