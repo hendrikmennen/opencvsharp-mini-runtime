@@ -65,7 +65,7 @@ jobs:
       run: |
         if [[ "${{ matrix.os }}" =~ ^ubuntu ]]; then
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config
+          sudo apt-get install -y build-essential cmake pkg-config libx264-dev
         fi
 
     - name: Configure OpenCvSharp
