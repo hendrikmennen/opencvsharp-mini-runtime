@@ -119,9 +119,17 @@ jobs:
           --enable-zlib
 
         # Validate Linux encoder setup for desktop runtime use:
-        # prefer software H.264 (libx264), avoid hardware-only v4l2m2m.
-        grep -q '^CONFIG_LIBX264_ENCODER=yes' ffbuild/config.mak
-        grep -q '^CONFIG_H264_V4L2M2M_ENCODER=no' ffbuild/config.mak
+        # require software H.264 (libx264), avoid hardware-only v4l2m2m.
+        if ! grep -q '^CONFIG_LIBX264_ENCODER=yes' ffbuild/config.mak; then
+          echo "::error::CONFIG_LIBX264_ENCODER is not enabled"
+          grep -E '^CONFIG_LIBX264_ENCODER=' ffbuild/config.mak || true
+          exit 1
+        fi
+        if grep -q '^CONFIG_H264_V4L2M2M_ENCODER=yes' ffbuild/config.mak; then
+          echo "::error::CONFIG_H264_V4L2M2M_ENCODER is still enabled"
+          grep -E '^CONFIG_H264_V4L2M2M_ENCODER=' ffbuild/config.mak || true
+          exit 1
+        fi
         
         make -j$(nproc)
         make install
