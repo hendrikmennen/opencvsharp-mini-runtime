@@ -181,7 +181,7 @@ jobs:
           cp -r ../opencvsharp/build/OpenCvSharpExtern/libOpenCvSharpExtern.* ./lib
 
           # Bundle libx264 for desktop runtime machines that don't have it preinstalled.
-          X264_PATH="$(ldconfig -p | awk '/libx264\\.so\\.[0-9]+/{print $4; exit}')"
+          X264_PATH="$(ldconfig -p | awk '/libx264\.so\.[0-9]+/{print $4; exit}')"
           if [[ -z "${X264_PATH:-}" || ! -f "$X264_PATH" ]]; then
             echo "::error::Could not locate libx264 shared library on runner"
             ldconfig -p | grep -i x264 || true
